@@ -3,8 +3,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
+type Property = {
+  id: number;
+  title: string;
+  city: string;
+  price: number;
+  imageUrl: string;
+  [key: string]: any; // pro další pole, pokud nějaká jsou
+};
+
 export default function PropertyList() {
-  const [properties, setProperties] = useState<any[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -18,8 +27,8 @@ export default function PropertyList() {
         return;
       }
 
-      const propertiesWithImages = await Promise.all(
-        props.map(async (property) => {
+      const propertiesWithImages: Property[] = await Promise.all(
+        props.map(async (property: any) => {
           const { data: images } = await supabase
             .from("property_images")
             .select("image_url")
