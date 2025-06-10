@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function PropertyList() {
-  const [properties, setProperties] = useState([]);
+  const [properties, setProperties] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -18,7 +18,6 @@ export default function PropertyList() {
         return;
       }
 
-      // Načíst obrázky pro každou nemovitost
       const propertiesWithImages = await Promise.all(
         props.map(async (property) => {
           const { data: images } = await supabase
