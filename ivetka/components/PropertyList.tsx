@@ -1,26 +1,44 @@
-interface Property {
-  id: number;
-  title: string;
-  location: string;
-  imageUrl: string;
-}
+"use client";
 
-const mockProperties: Property[] = [
-  {
-    id: 1,
-    title: "Rodinný dům v Brně",
-    location: "Brno",
-    imageUrl: "/img/dum.jpg", // Nahraď dle skutečného souboru
-  },
-  {
-    id: 2,
-    title: "Byt 2+kk v Praze",
-    location: "Praha",
-    imageUrl: "/img/byt.jpg",
-  },
-];
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function PropertyList() {
+  const [properties, setProperties] = useState([]);
+
+  useEffect(() => {
+    const fetchProperties = async () => {
+      const { data: props, error } = await supabase.from("properties").select("*");
+      if (error) {
+        console.error("Chyba při načítání nemovitostí:", error.message);
+        return;
+      }
+      if (!props || props.length === 0) {
+        setProperties([]);
+        return;
+      }
+
+      // Načíst obrázky pro každou nemovitost
+      const propertiesWithImages = await Promise.all(
+        props.map(async (property) => {
+          const { data: images } = await supabase
+            .from("property_images")
+            .select("image_url")
+            .eq("property_id", property.id);
+
+          return {
+            ...property,
+            imageUrl: images && images.length > 0 ? images[0].image_url : "/img/no-image.png",
+          };
+        })
+      );
+
+      setProperties(propertiesWithImages);
+    };
+
+    fetchProperties();
+  }, []);
+
   return (
     <section id="properties" className="bg-gray-50 py-16 px-4">
       <div className="max-w-6xl mx-auto">
@@ -28,19 +46,26 @@ export default function PropertyList() {
           Nejnovější nemovitosti
         </h2>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {mockProperties.map((property) => (
-            <div key={property.id} className="bg-white rounded shadow hover:shadow-md transition-shadow duration-300 overflow-hidden">
-              <img
-                src={property.imageUrl}
-                alt={property.title}
-                className="w-full h-48 object-cover"
-              />
-              <div className="p-4">
-                <h3 className="text-lg font-semibold text-gray-800">{property.title}</h3>
-                <p className="text-gray-500">{property.location}</p>
-              </div>
+          {properties.length === 0 ? (
+            <div className="col-span-full text-center text-gray-500">
+              Žádné nemovitosti nebyly nalezeny.
             </div>
-          ))}
+          ) : (
+            properties.map((property) => (
+              <div key={property.id} className="bg-white rounded shadow hover:shadow-md transition-shadow duration-300 overflow-hidden">
+                <img
+                  src={property.imageUrl}
+                  alt={property.title}
+                  className="w-full h-48 object-cover"
+                />
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold text-gray-800">{property.title}</h3>
+                  <p className="text-gray-500">{property.city}</p>
+                  <p className="text-gray-700 font-bold mt-2">{property.price} Kč</p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </section>

@@ -31,7 +31,7 @@ export default function AdminPage() {
 
       const propertiesWithImages = await Promise.all(
         props.map(async (property) => {
-          const { data: images, error: imgError } = await supabase
+          const { data: images } = await supabase
             .from('property_images')
             .select('image_url')
             .eq('property_id', property.id);
@@ -100,6 +100,51 @@ export default function AdminPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (editIndex !== null) {
+      // EDITACE
+      const property = properties[editIndex];
+      const { error } = await supabase.from('properties').update({
+        title: form.title,
+        city: form.city,
+        size: form.size,
+        price: form.price,
+        status: form.status,
+        matterport_url: form.matterportUrl,
+        description: form.description,
+        map_url: form.mapUrl,
+      }).eq('id', property.id);
+
+      let uploadedImages = property.imagePreviews || [];
+      if (form.images.length > 0) {
+        uploadedImages = [
+          ...uploadedImages,
+          ...(await uploadImagesToSupabase(property.id, form.images)),
+        ];
+      }
+
+      if (!error) {
+        const updated = { ...property, ...form, imagePreviews: uploadedImages };
+        setProperties(properties.map((p, i) => (i === editIndex ? updated : p)));
+        setEditIndex(null);
+        setForm({
+          title: '',
+          city: '',
+          size: '',
+          price: '',
+          status: '',
+          matterportUrl: '',
+          description: '',
+          mapUrl: '',
+          images: [],
+        });
+        setImagePreviews([]);
+      } else {
+        alert('Chyba při úpravě nemovitosti');
+      }
+      return;
+    }
+
+    // NOVÁ NEMOVITOST
     const { data: newProperty, error } = await supabase.from('properties').insert([
       {
         title: form.title,
@@ -136,6 +181,35 @@ export default function AdminPage() {
     });
     setImagePreviews([]);
     setProperties([...properties, { ...newProperty, imagePreviews: uploadedImages }]);
+  };
+
+  // SMAZÁNÍ
+  const handleDelete = async (propertyId) => {
+    if (!window.confirm('Opravdu chcete smazat tuto nemovitost?')) return;
+    const { error } = await supabase.from('properties').delete().eq('id', propertyId);
+    if (!error) {
+      setProperties(properties.filter((p) => p.id !== propertyId));
+    } else {
+      alert('Chyba při mazání nemovitosti');
+    }
+  };
+
+  // EDITACE
+  const handleEdit = (property, index) => {
+    setEditIndex(index);
+    setForm({
+      title: property.title || '',
+      city: property.city || '',
+      size: property.size || '',
+      price: property.price || '',
+      status: property.status || '',
+      matterportUrl: property.matterport_url || '',
+      description: property.description || '',
+      mapUrl: property.map_url || '',
+      images: [],
+    });
+    setImagePreviews(property.imagePreviews || []);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -193,7 +267,7 @@ export default function AdminPage() {
           <h2 className="text-xl font-semibold mb-4">Seznam nemovitostí</h2>
           <ul className="space-y-4">
             {properties.map((prop, index) => (
-              <li key={index} className="border-b pb-4">
+              <li key={prop.id || index} className="border-b pb-4">
                 <p><strong>{prop.title}</strong> – {prop.city}, {prop.size} m², {prop.price} Kč</p>
                 <p>Status: {prop.status}</p>
                 <p className="text-sm text-gray-600">{prop.description}</p>
@@ -204,6 +278,20 @@ export default function AdminPage() {
                     ))}
                   </div>
                 )}
+                <div className="flex gap-2 mt-2">
+                  <button
+                    className="px-3 py-1 bg-yellow-400 text-black rounded hover:bg-yellow-500 transition"
+                    onClick={() => handleEdit(prop, index)}
+                  >
+                    Upravit
+                  </button>
+                  <button
+                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition"
+                    onClick={() => handleDelete(prop.id)}
+                  >
+                    Smazat
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
