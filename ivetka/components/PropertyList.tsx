@@ -9,7 +9,7 @@ type Property = {
   city: string;
   price: number;
   imageUrl: string;
-  [key: string]: any; // pro další pole, pokud nějaká jsou
+  [key: string]: unknown; // pro další pole, pokud nějaká jsou
 };
 
 export default function PropertyList() {
@@ -28,16 +28,19 @@ export default function PropertyList() {
       }
 
       const propertiesWithImages: Property[] = await Promise.all(
-        props.map(async (property: any) => {
+        props.map(async (property: Record<string, unknown>) => {
           const { data: images } = await supabase
             .from("property_images")
             .select("image_url")
-            .eq("property_id", property.id);
+            .eq("property_id", property.id as number);
 
           return {
             ...property,
-            imageUrl: images && images.length > 0 ? images[0].image_url : "/img/no-image.png",
-          };
+            imageUrl:
+              images && images.length > 0
+                ? images[0].image_url
+                : "/img/no-image.png",
+          } as Property;
         })
       );
 
@@ -60,16 +63,23 @@ export default function PropertyList() {
             </div>
           ) : (
             properties.map((property) => (
-              <div key={property.id} className="bg-white rounded shadow hover:shadow-md transition-shadow duration-300 overflow-hidden">
+              <div
+                key={property.id}
+                className="bg-white rounded shadow hover:shadow-md transition-shadow duration-300 overflow-hidden"
+              >
                 <img
                   src={property.imageUrl}
                   alt={property.title}
                   className="w-full h-48 object-cover"
                 />
                 <div className="p-4">
-                  <h3 className="text-lg font-semibold text-gray-800">{property.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {property.title}
+                  </h3>
                   <p className="text-gray-500">{property.city}</p>
-                  <p className="text-gray-700 font-bold mt-2">{property.price} Kč</p>
+                  <p className="text-gray-700 font-bold mt-2">
+                    {property.price} Kč
+                  </p>
                 </div>
               </div>
             ))
